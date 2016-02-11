@@ -79,13 +79,13 @@ bool getUp(motor393 *motor_, bool g){ //funcion booleana que controla la banda p
 		motorFront(&motor_[motorUp]); //en caso de que "g" sea verdadero entonces avanza
 	}
 	else {
-		motorStop(&motor_[motorUp]);  //si no, retrocede
+		motorStop(&motor_[motorUp]);  //si no, se apaga
 	}
 	return !g; //regresa lo contrario pues se hizo un cambio
 }
 void startSpeed(motor393 *motor_){ //define velocidades de los motores
-	motorSetSpeed(&motor_[motorRight], 100);
-	motorSetSpeed(&motor_[motorLeft], 100);
+	motorSetSpeed(&motor_[motorRight], MAX);
+	motorSetSpeed(&motor_[motorLeft], MAX);
 	motorSetSpeed(&motor_[motorSuc], 100);
 	motorSetSpeed(&motor_[motorUp], 100);
 	motorSetSpeed(&motor_[motorLiftFront], 120);
@@ -105,7 +105,23 @@ void stopLift(motor393 *motor1, motor393 *motor2){
 	motorStop(motor1);
 	motorStop(motor2);
 }
-
+void front(motor393 *motor_){
+     motorFront(&motor_[motorRight]);
+     motorFront(&motor_[motorLeft]);
+}
+void back(motor393 *motor_){
+     motorBack(&motor_[motorRight]);
+     motorBack(&motor_[motorLeft]);
+}
+void turnback(motor393 *motor_){
+     motorBack(&motor_[motorRight]);
+     motorStop(&motor_[motorLeft]);
+     delay(300);
+}
+void stopRobot(motor393 *motor_){
+     motorStop(&motor_[motorRight]);
+     motorStop(&motor_[motorLeft]);
+}
 /////////////////////////////////////////////////////////////////////////////////////////
 //
 //                          Pre-Autonomous Functions
@@ -114,8 +130,6 @@ void stopLift(motor393 *motor1, motor393 *motor2){
 // following function.
 //
 /////////////////////////////////////////////////////////////////////////////////////////
-
-motor393 *mot;//aqui declaro una variable global porque no encontre otra forma de mandar la direccion de los motores a la tarea del control
 
 void initialize(motor393 *_motor, short *fronts, short *ports){ //le doy los valores a los motores
 	for(short i=0; i<10; i++)
@@ -142,7 +156,28 @@ void pre_auton()
 
 task autonomous()
 {
-	motor393 *_motor=mot;
+	motor393 motor_[10];//declaro los motores
+	short fronts[10]={1, FRONTLEFT, FRONTRIGHT, FRONTUP, FRONTSUC, FRONTLIFTFRONT, FRONTLIFTBACK, FRONTSHOTRIGHT, FRONTSHOTLEFT, 1};
+	short ports[10]={0,motorLeft,motorRight,motorUp,motorSuc,motorLiftFront,motorLiftBack,motorShotRight,motorShotLeft,0};
+	initialize(&motor_[0], &fronts[0], &ports[0]);
+	startSpeed(&motor_[0]);
+	up(&motor_[motorShotRight], &motor_[motorShotLeft]);
+	front(motor_);
+	delay(8000);
+	stopRobot(motor_);
+	motorFront(&motor_[motorSuc]);
+	motorFront(&motor_[motorUp]);
+	delay(2000);
+	stopLift(&motor_[motorShotRight], &motor_[motorShotLeft]);
+	back(motor_);
+	delay(500);
+  turnback(motor_);
+  delay(2600);
+  while(true){
+		motorFront(&motor_[motorUp]);
+		stopLift(&motor_[motorShotRight], &motor_[motorShotLeft]);
+		front(motor_);
+  }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -193,7 +228,7 @@ bool controlBandas(motor393 *motor_, bool g){ //funcion que controla las bandas
 	if(vexRT[SUBIR]){
 		getUp(motor_, g);
 		g=!g;
-		waitUntil(!vexRT[SUBIR]);//espera hasta que suelte el motor
+		waitUntil(!vexRT[SUBIR]);//espera hasta que suelte el boton
 	}
 	return g; //la funcion es booleana por que necesita retornar una variable que le da getUp
 
@@ -214,20 +249,23 @@ bool controlShot(motor393 *motor_, bool dis){ //funcion que controla los dispara
 	if(vexRT[DISPARO] && dis){
 		up(&motor_[motorShotRight], &motor_[motorShotLeft]);
 		dis=false;
-		waitUntil(!vexRT[DISPARO]);//espera hasta que suelte el motor
+		waitUntil(!vexRT[DISPARO]);//espera hasta que suelte el boton
 	}
 	else if(vexRT[DISPARO]){
 		stopLift(&motor_[motorShotRight], &motor_[motorShotLeft]);
 		dis=true;
-		waitUntil(!
-		vexRT[DISPARO]);//espera hasta que suelte el motor
+		waitUntil(!vexRT[DISPARO]);//espera hasta que suelte el boton
 	}
 	return dis;
 }
 
 task usercontrol()
 {
-	motor393 *_motor=mot;
+	motor393 _motor[10];//declaro los motores
+	short fronts[10]={1, FRONTLEFT, FRONTRIGHT, FRONTUP, FRONTSUC, FRONTLIFTFRONT, FRONTLIFTBACK, FRONTSHOTRIGHT, FRONTSHOTLEFT, 1};
+	short ports[10]={0,motorLeft,motorRight,motorUp,motorSuc,motorLiftFront,motorLiftBack,motorShotRight,motorShotLeft,0};
+	initialize(&_motor[0], &fronts[0], &ports[0]);
+	startSpeed(&_motor[0]);
 	bool subir=true;
 	bool dis=true;
 	while(true){
